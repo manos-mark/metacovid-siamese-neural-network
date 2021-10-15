@@ -162,7 +162,7 @@ if not os.path.exists(MODEL_FNAME):
     history = embedding_network.fit(
         train_batches,
         validation_data = val_batches,
-        epochs = 2,
+        epochs = 140,
         verbose = 1,
         shuffle = True,
         callbacks = [early_stopping, checkpointer]

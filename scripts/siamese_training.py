@@ -76,40 +76,34 @@ embedding_network.trainable = False
 # model we add a flatten layer which is followed by a dense layer with 5120 
 # neurons, sigmoid activation function, and L2 kernel regularizer
 
-# tower_1 = embedding_network(input_1)
-# tower_2 = embedding_network(input_2)
+tower_1 = embedding_network(input_1)
+tower_2 = embedding_network(input_2)
 
-# merge_layer = utils.manhattan_distance([tower_1, tower_2])
-# output_layer = Dense(1, activation="sigmoid")(merge_layer)
+merge_layer = utils.manhattan_distance([tower_1, tower_2])
+output_layer = Dense(1, activation="sigmoid")(merge_layer)
 
-# siamese = Model(inputs=[input_1, input_2], outputs=[output_layer])
-# siamese.summary()
+siamese = Model(inputs=[input_1, input_2], outputs=[output_layer])
+siamese.summary()
 
-# """ callbacks """
+""" callbacks """
 
-# # reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,patience=5, min_lr=0.000001)
-# early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
-# checkpointer = ModelCheckpoint(filepath='siamese_network.h5', verbose=1, 
-#                                 save_best_only=True)
+# reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,patience=5, min_lr=0.000001)
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+checkpointer = ModelCheckpoint(filepath='siamese_network.h5', verbose=1, 
+                                save_best_only=True)
 
+""" train the model """
 
-# x_train_1_tensor = tf.convert_to_tensor(x_train_1, dtype=tf.float32)
-# x_train_2_tensor = tf.convert_to_tensor(x_train_2, dtype=tf.float32)
-
-# x_val_1_tensor = tf.convert_to_tensor(x_val_1, dtype=tf.float32)
-# x_val_2_tensor = tf.convert_to_tensor(x_val_2, dtype=tf.float32)
-
-# """ train the model """
-
-# optimizer = Adam(learning_rate=0.0001)
-# siamese.compile(loss=utils.loss(1), optimizer=optimizer, metrics=["accuracy"])
+optimizer = Adam(learning_rate=0.0001)
+siamese.compile(loss=utils.loss(1), optimizer=optimizer, metrics=["accuracy"])
                  
-# siamese.summary()
-# history = siamese.fit([x_train_1_tensor, x_train_2_tensor],
-#     labels_train,
-#     validation_data=([x_val_1_tensor, x_val_2_tensor], labels_val),
-#     batch_size=10,
-#     epochs=175,   # 175 for contrastive 100 for cross ent
-#     callbacks = [early_stopping]
-# )
+siamese.summary()
+history = siamese.fit([x_train_1, x_train_2],
+    labels_train,
+    validation_data=([x_val_1, x_val_2], labels_val),
+    # batch_size=10,
+    # steps_per_epoch=10,
+    epochs=175,   # 175 for contrastive 100 for cross ent
+    callbacks = [checkpointer, early_stopping]
+)
 
