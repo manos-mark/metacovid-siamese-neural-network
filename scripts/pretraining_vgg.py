@@ -40,7 +40,7 @@ print('\t\u2022 Running on GPU' if tf.test.is_gpu_available() else '\t\u2022 GPU
 
 """ load the datasets """
 
-base_dir = 'input'
+base_dir = os.path.join('dataset', 'pretrain')
 
 train_dir = os.path.join(base_dir, 'train')
 val_dir = os.path.join(base_dir, 'validation')
