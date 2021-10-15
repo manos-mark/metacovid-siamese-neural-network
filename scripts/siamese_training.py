@@ -50,10 +50,29 @@ def make_pairs(x, y):
         pairs += [[x1, x2]]
         labels += [0]
 
-    return np.array(pairs), np.array(labels).astype("float32")
+    return np.array(pairs, dtype=object), np.array(labels, dtype=object).astype("float32")
 
-
+    
 """ Load the dataset and prepare pairs"""
+
+
+def preprocess(array):
+    """
+    Normalize and resize the input array
+    """
+    processed_imgs = np.zeros((len(array), 100, 100, 3))
+    
+    print(array[0].shape)
+    for i, img in enumerate(array):
+        # rescale to have values within 0 - 1 range [0,255] --> [0,1] 
+        img = img.astype('float32') / 255.0
+        
+        # resize the image 
+        img = np.resize(img, (100, 100, 3))
+        
+        processed_imgs[i,:,:] = img
+        
+    return processed_imgs
 
 def load_images(base_dir, path):
     image_list = []
@@ -67,8 +86,12 @@ def load_images(base_dir, path):
             im = cv2.imread(impath, cv2.IMREAD_UNCHANGED)
             image_list.append(im)
             y_list.append(classes[classdir])
-            
-    return np.array(image_list, dtype=object), np.array(y_list, dtype=object)
+    
+    image_list = np.array(image_list, dtype=object)
+    y_list = np.array(y_list, dtype=object)
+    
+    image_list = preprocess(image_list)        
+    return image_list, y_list
         
 CLASS_NAMES = ["covid", "normal", "pneumonia"]
 classes = dict(zip(CLASS_NAMES, range(len(CLASS_NAMES))))
@@ -82,8 +105,9 @@ print("The train set contains",len(train_image_list))
 valid_image_list, valid_y_list = load_images(basedir, 'validation')   
 print("The valid set contains", len(valid_image_list))  
 
-test_image_list, test_y_list = load_images(basedir, 'test')   
-print("The test set contains", len(test_image_list))  
+# test_image_list, test_y_list = load_images(basedir, 'test')   
+# print("The test set contains", len(test_image_list))  
+
 
 # make train pairs
 pairs_train, labels_train = make_pairs(train_image_list, train_y_list)
@@ -92,65 +116,90 @@ pairs_train, labels_train = make_pairs(train_image_list, train_y_list)
 pairs_val, labels_val = make_pairs(valid_image_list, valid_y_list)
 
 # make test pairs
-pairs_test, labels_test = make_pairs(test_image_list, test_y_list)
+#pairs_test, labels_test = make_pairs(test_image_list, test_y_list)
 
-# """ L1 mistance - manhattan """
-# def manhattan_distance(vects):
-#    x, y = vects
-#    return K.sum(K.abs(x-y),axis=1,keepdims=True)
+x_train_1 = pairs_train[:, 0]  
+x_train_2 = pairs_train[:, 1]
 
-# """ L2 distance """
-# def euclidean_distance(vects):
-#     x, y = vects
-#     sum_square = tf.math.reduce_sum(tf.math.square(x - y), axis=1, keepdims=True)
-#     return tf.math.sqrt(tf.math.maximum(sum_square, tf.keras.backend.epsilon()))
+print(type(x_train_1))# np.array
+print("number of pairs for training", np.shape(x_train_1)[0]) # we have 60 pairs
 
+print(np.shape(x_train_1[0]))
 
-# def loss(margin=1):
-#     def contrastive_loss(y_true, y_pred):
-#         square_pred = tf.math.square(y_pred)
-#         margin_square = tf.math.square(tf.math.maximum(margin - (y_pred), 0))
-#         return tf.math.reduce_mean((1 - y_true) * square_pred + (y_true) * margin_square)
+x_val_1 = pairs_val[:, 0] 
+x_val_2 = pairs_val[:, 1]
 
-#     return contrastive_loss
+print(type(x_train_1))# np.array
+print("number of pairs for validation", np.shape(x_train_1)[0]) # we have 60 pairs
 
+# x_test_1 = pairs_test[:, 0] 
+# x_test_2 = pairs_test[:, 1]
 
-# # make train pairs
-# pairs_train, labels_train = make_pairs(x_train, y_train)
+print(type(x_train_1))# np.array
+print("number of pairs for test", np.shape(x_train_1)[0]) # we have 60 pairs
 
-# # make validation pairs
-# pairs_val, labels_val = make_pairs(x_val, y_val)
+""" L1 mistance - manhattan """
+def manhattan_distance(vects):
+    x, y = vects
+    return K.sum(K.abs(x-y),axis=1,keepdims=True)
 
-# # make test pairs
-# pairs_test, labels_test = make_pairs(x_test, y_test)
-
-
-# input_1 = Input((100,100,3))
-# input_2 = Input((100,100,3))
+""" L2 distance """
+def euclidean_distance(vects):
+    x, y = vects
+    sum_square = tf.math.reduce_sum(tf.math.square(x - y), axis=1, keepdims=True)
+    return tf.math.sqrt(tf.math.maximum(sum_square, tf.keras.backend.epsilon()))
 
 
-# embedding_network = tf.keras.models.load_model(MODEL_FNAME)
+def loss(margin=1):
+    def contrastive_loss(y_true, y_pred):
+        square_pred = tf.math.square(y_pred)
+        margin_square = tf.math.square(tf.math.maximum(margin - (y_pred), 0))
+        return tf.math.reduce_mean((1 - y_true) * square_pred + (y_true) * margin_square)
 
-# # add here as the output of embedding network Towards the end of the pretrained model we add a flatten layer which is followed by a dense layer with 5120 neurons, sigmoid ac- tivation function, and L2 kernel regularizer
+    return contrastive_loss
 
-# tower_1 = embedding_network(input_1)
-# tower_2 = embedding_network(input_2)
 
-# merge_layer = manhattan_distance([tower_1, tower_2])
-# output_layer = Dense(1, activation="sigmoid")(merge_layer)
+input_1 = Input((100,100,3))
+input_2 = Input((100,100,3))
 
-# siamese = Model(inputs=[input_1, input_2], outputs=[output_layer])
-# siamese.summary()
 
-# reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,patience=5, min_lr=0.000001)
+embedding_network = tf.keras.models.load_model(MODEL_FNAME)
 
-# siamese.compile(loss=loss(1), optimizer="adam", metrics=["accuracy"])
-# siamese.summary()
-# history = siamese.fit([x_train_1, x_train_2],
-#     labels_train,
-#     validation_data=([x_val_1, x_val_2], labels_val),
-#     batch_size=batch_size,
-#     epochs=epochs,
-#     callbacks = [early_stopping, checkpointer]
-# )
+
+# add here as the output of embedding network Towards the end of the pretrained model we add a flatten layer which is followed by a dense layer with 5120 neurons, sigmoid ac- tivation function, and L2 kernel regularizer
+
+tower_1 = embedding_network(input_1)
+tower_2 = embedding_network(input_2)
+
+merge_layer = manhattan_distance([tower_1, tower_2])
+output_layer = Dense(1, activation="sigmoid")(merge_layer)
+
+siamese = Model(inputs=[input_1, input_2], outputs=[output_layer])
+siamese.summary()
+
+""" callbacks """
+
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,patience=5, min_lr=0.000001)
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+checkpointer = ModelCheckpoint(filepath='siamese_network.h5', verbose=1, 
+                                save_best_only=True)
+
+
+x_train_1_tensor = tf.convert_to_tensor(x_train_1, dtype=tf.float32)
+x_train_2_tensor = tf.convert_to_tensor(x_train_2, dtype=tf.float32)
+
+x_val_1_tensor = tf.convert_to_tensor(x_val_1, dtype=tf.float32)
+x_val_2_tensor = tf.convert_to_tensor(x_val_2, dtype=tf.float32)
+
+""" train the model """
+
+siamese.compile(loss=loss(1), optimizer="adam", metrics=["accuracy"])
+siamese.summary()
+history = siamese.fit([x_train_1_tensor, x_train_2_tensor],
+    labels_train,
+    validation_data=([x_val_1_tensor, x_val_2_tensor], labels_val),
+    batch_size=1,
+    epochs=175,   # 175 for contrastive 100 for cross ent
+    callbacks = [early_stopping, reduce_lr]
+)
 
