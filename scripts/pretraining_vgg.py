@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 12 15:03:44 2021
 
-@author: aktas
-"""
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -13,6 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import math
+
+import scripts.utils as utils
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.preprocessing import image
@@ -98,24 +96,24 @@ num_normal_test = int(len(os.listdir(test_normal_dir)))
 num_pneumonia_test = int(len(os.listdir(test_pneumonia_dir)))
 
 print('The dataset contains:')
-print(f'\u2022 %d training images'%(num_covid_train + num_normal_train + num_pneumonia_train))
-print(f'\u2022 %d validation images'%(num_covid_val + num_normal_val + num_pneumonia_val))
-print(f'\u2022 %d test images'%(num_covid_test + num_normal_test + num_pneumonia_test))
+print('\u2022 {} training images'.format(num_covid_train + num_normal_train + num_pneumonia_train))
+print('\u2022 {} validation images'.format(num_covid_val + num_normal_val + num_pneumonia_val))
+print('\u2022 {} test images'.format(num_covid_test + num_normal_test + num_pneumonia_test))
 
 print('\nThe training set contains:')
-print(f'\u2022 %d covid images'%(num_covid_train))
-print(f'\u2022 %d normal images'%(num_normal_train))
-print(f'\u2022 %d pneumonia images'%(num_pneumonia_train))
+print('\u2022 {} covid images'.format(num_covid_train))
+print('\u2022 {} normal images'.format(num_normal_train))
+print('\u2022 {} pneumonia images'.format(num_pneumonia_train))
 
 print('\nThe validation set contains:')
-print(f'\u2022 %d covid images'%(num_covid_val))
-print(f'\u2022 %d normal images'%(num_normal_val))
-print(f'\u2022 %d pneumonia images'%(num_pneumonia_val))
+print('\u2022 {} covid images'.format(num_covid_val))
+print('\u2022 {} normal images'.format(num_normal_val))
+print('\u2022 {} pneumonia images'.format(num_pneumonia_val))
 
 print('\nThe test set contains:')
-print(f'\u2022 %d covid images'%(num_covid_test))
-print(f'\u2022 %d normal images'%(num_normal_test))
-print(f'\u2022 %d pneumonia images'%(num_pneumonia_test))
+print('\u2022 {} covid images'.format(num_covid_test))
+print('\u2022 {} normal images'.format(num_normal_test))
+print('\u2022 {} pneumonia images'.format(num_pneumonia_test))
 
 MODEL_FNAME = 'embedding_network.h5'
 
@@ -164,29 +162,19 @@ if not os.path.exists(MODEL_FNAME):
     history = embedding_network.fit(
         train_batches,
         validation_data = val_batches,
-        epochs = 140,
+        epochs = 2,
         verbose = 1,
         shuffle = True,
         callbacks = [early_stopping, checkpointer]
     )
     
     """ plot the train and val accuracies """
+    # Plot the accuracy
+    utils.plt_metric(history=history.history, metric="acc", title="Model accuracy")
     
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-    plt.title('model accuracy')
-    plt.ylabel('accuracy')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'val'], loc='upper left')
-    plt.show()
-    
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('model loss')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'val'], loc='upper left')
-    plt.show()
+    # Plot the constrastive loss
+    utils.plt_metric(history=history.history, metric="loss", title="Constrastive Loss")
+
     
     print("End of Training, the model is saved to", MODEL_FNAME)  
     tf.keras.backend.clear_session()
