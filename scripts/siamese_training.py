@@ -55,56 +55,35 @@ def make_pairs(x, y):
 
 """ Load the dataset and prepare pairs"""
 
+def load_images(base_dir, path):
+    image_list = []
+    y_list = []
+
+    for classdir in os.listdir(os.path.join(basedir, path)):
+        for filename in os.listdir(os.path.join(basedir, path, classdir)):
+            impath = os.path.join(basedir, path, classdir, filename)
+            if not os.path.isfile(impath):
+                raise ValueError('Image name doesnt exist') 
+            im = cv2.imread(impath, cv2.IMREAD_UNCHANGED)
+            image_list.append(im)
+            y_list.append(classes[classdir])
+            
+    return np.array(image_list, dtype=object), np.array(y_list, dtype=object)
+        
 CLASS_NAMES = ["covid", "normal", "pneumonia"]
 classes = dict(zip(CLASS_NAMES, range(len(CLASS_NAMES))))
 
-train_image_list = []
-train_y_list = []
-basedir = "dataset_siamese\\train\\"
 
-for classdir in os.listdir(basedir):
-    for filename in  os.listdir(basedir + classdir):
-        impath = basedir +classdir + "\\" + filename
-        if not os.path.isfile(impath):
-            raise ValueError('Image name doesnt exist') 
-        im = cv2.imread(impath, cv2.IMREAD_UNCHANGED)
-        train_image_list.append(im)
-        train_y_list.append(classes[classdir])
-        
+basedir = os.path.join("dataset", "siamese") 
+
+train_image_list, train_y_list = load_images(basedir, 'train')
 print("The train set contains",len(train_image_list)) 
-print(train_y_list) 
 
-valid_image_list = []
-valid_y_list = []
-basedir = "dataset_siamese\\validation\\"
-
-for classdir in os.listdir(basedir):
-    for filename in  os.listdir(basedir+classdir):
-        impath = basedir + classdir + "\\" + filename
-        if not os.path.isfile(impath):
-            raise ValueError('Image name doesnt exist') 
-        im = cv2.imread(impath, cv2.IMREAD_UNCHANGED)
-        valid_image_list.append(im)
-        valid_y_list.append(classes[classdir])
-        
+valid_image_list, valid_y_list = load_images(basedir, 'validation')   
 print("The valid set contains", len(valid_image_list))  
-print(valid_y_list)
 
-test_image_list = []
-test_y_list = []
-basedir = "dataset_siamese\\test\\"
-
-for classdir in os.listdir(basedir):
-    for filename in  os.listdir(basedir+classdir):
-        impath = basedir + classdir + "\\" + filename
-        if not os.path.isfile(impath):
-            raise ValueError('Image name doesnt exist') 
-        im = cv2.imread(impath, cv2.IMREAD_UNCHANGED)
-        test_image_list.append(im)
-        test_y_list.append(classes[classdir])
-        
+test_image_list, test_y_list = load_images(basedir, 'test')   
 print("The test set contains", len(test_image_list))  
-print(test_y_list)        
 
 # make train pairs
 pairs_train, labels_train = make_pairs(train_image_list, train_y_list)
