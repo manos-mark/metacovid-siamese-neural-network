@@ -24,7 +24,7 @@ from tensorflow.keras.layers import Dense, Flatten, Input, Lambda, Dropout, Batc
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score, precision_score, recall_score
 import itertools
 
 import logging
@@ -33,8 +33,6 @@ from tensorflow.keras.models import load_model
 logger = tf.get_logger()
 logger.setLevel(logging.ERROR)
 
-
-
 print('Using:')
 print('\t\u2022 TensorFlow version:', tf.__version__)
 print('\t\u2022 tf.keras version:', tf.keras.__version__)
@@ -42,7 +40,7 @@ print('\t\u2022 Running on GPU' if tf.test.is_gpu_available() else '\t\u2022 GPU
 
 """ load the datasets """
 
-base_dir = 'dataset_pretrain\\'
+base_dir = 'input'
 
 train_dir = os.path.join(base_dir, 'train')
 val_dir = os.path.join(base_dir, 'validation')
@@ -61,7 +59,7 @@ test_normal_dir = os.path.join(test_dir, 'normal')
 test_pneumonia_dir = os.path.join(test_dir, 'pneumonia')
 
 INPUT_SIZE = 100
-BATCH_SIZE = 20
+BATCH_SIZE = 16
 
 
 """ Investigate train - val - test datasets """
@@ -119,8 +117,6 @@ print(f'\u2022 %d covid images'%(num_covid_test))
 print(f'\u2022 %d normal images'%(num_normal_test))
 print(f'\u2022 %d pneumonia images'%(num_pneumonia_test))
 
-#train_batches.next()[0].shape
-
 MODEL_FNAME = 'embedding_network.h5'
 
 if not os.path.exists(MODEL_FNAME):
@@ -162,8 +158,7 @@ if not os.path.exists(MODEL_FNAME):
     
     checkpointer = ModelCheckpoint(filepath='embedding_network.h5', verbose=1, 
                                    save_best_only=True)
-    
-    
+        
     """ Train the model """
     
     history = embedding_network.fit(
@@ -199,32 +194,21 @@ else:
     """ Test the model """
     model = tf.keras.models.load_model(MODEL_FNAME)
     model.summary()
-    test_loss = model.evaluate_generator(test_batches)[0]
-    print('\n')
-    print('Test loss: '+str(test_loss))
-
-    CLASS_NAMES = ["covid", "normal", "pneumonia"]
-    classes = dict(zip(CLASS_NAMES, range(len(CLASS_NAMES))))
-
-    """ plot test results """
     
-    correct = 0
-    count = 0
-
-    for class_dir in os.listdir(test_dir):
-        cls = classes[class_dir]
-        for imname in os.listdir(os.path.join(test_dir, class_dir)):
-            imageSample = image.load_img(os.path.join(test_dir, class_dir, imname), target_size=(INPUT_SIZE,INPUT_SIZE))
+    y_test = test_batches.classes
     
-            startTime = time.time()
-            im = image.img_to_array(imageSample)
-            im = im.reshape(-1,INPUT_SIZE,INPUT_SIZE,3)
-            out = model.predict(im / 255.)
-            
-            predicted_cls = np.argmax(np.mean(out, axis=0))
-            if predicted_cls == cls:
-                correct += 1
-            count += 1
-            
-    print('Test Acc. = ' + str(correct / count) + '\n')        
-           
+    #Confution Matrix and Classification Report
+    Y_pred = model.predict_generator(test_batches, (num_covid_test + num_normal_test + num_pneumonia_test) // BATCH_SIZE+1)
+    y_pred = np.argmax(Y_pred, axis=1)
+    
+    class_labels = list(test_batches.class_indices.keys())   
+    
+    cm = confusion_matrix(test_batches.classes, y_pred, normalize='all')    
+    cm_display = ConfusionMatrixDisplay(cm, class_labels).plot()
+    
+    # results = model.evaluate_generator(test_batches)
+    print("\nEvaluate on test data")
+    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print("Precision:", precision_score(y_test, y_pred, average='weighted'))
+    print("Recall:", recall_score(y_test, y_pred, average='weighted'))
+    
