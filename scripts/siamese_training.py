@@ -59,31 +59,27 @@ print("number of pairs for test", np.shape(x_test_1)[0])
 
 # utils.visualize(pairs_train[:-1], labels_train[:-1], to_show=4, num_col=4)
 
+tf.compat.v1.reset_default_graph()
+
 input_1 = Input((100,100,3))
 input_2 = Input((100,100,3))
 
-
 embedding_network = tf.keras.models.load_model(MODEL_FNAME)
-embedding_network.trainable = False
+embedding_network.trainable = True
 
 # add here as the output of embedding network Towards the end of the pretrained 
 # model we add a flatten layer which is followed by a dense layer with 5120 
 # neurons, sigmoid activation function, and L2 kernel regularizer
-def tower(inputs_m):
-    inputs =inputs_m    
+def tower(inputs, embedding_network):
     x = Flatten()(embedding_network(inputs))
     outputs = Dense(5120, activation='sigmoid')(x)
-    model = Model(inputs,outputs= [outputs])
+    model = Model(inputs, outputs=[outputs])
     return model
-# print(x.shape)
-tower_1 = tower(input_1)
-tower_2 = tower(input_2)
-# tower_1 = Model(inputs=[embedding_network.input], outputs=[x])
-# tower_2 = Model(inputs=[embedding_network.input], outputs=[x])
-# tower_1 = embedding_network(input_1)
-# tower_2 = embedding_network(input_2)
 
-merge_layer = utils.manhattan_distance([tower_1.output, tower_2.output])
+tower_1 = tower(input_1, embedding_network)
+tower_2 = tower(input_2, embedding_network)
+
+merge_layer = utils.manhatan_distance([tower_1.output, tower_2.output])
 output_layer = Dense(1, activation="sigmoid")(merge_layer)
 
 siamese = Model(inputs=[tower_1.input, tower_2.input], outputs=[output_layer])
@@ -91,7 +87,8 @@ siamese.summary()
 
 """ callbacks """
 
-# reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,patience=5, min_lr=0.000001)
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.000001)
+
 early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
 
 checkpointer = ModelCheckpoint(filepath='siamese_network.h5', verbose=1, 
@@ -106,9 +103,14 @@ siamese.summary()
 history = siamese.fit([x_train_1, x_train_2],
     labels_train,
     validation_data=([x_val_1, x_val_2], labels_val),
-    # batch_size=10,
+    batch_size=10,
     # steps_per_epoch=10,
     epochs=175,   # 175 for contrastive 100 for cross ent
-    callbacks = [checkpointer, early_stopping]
+    callbacks = [checkpointer, early_stopping, reduce_lr]
 )
 
+# Plot the accuracy
+utils.plt_metric(history=history.history, metric="acc", title="Model accuracy")
+
+# Plot the constrastive loss
+utils.plt_metric(history=history.history, metric="loss", title="Constrastive Loss")

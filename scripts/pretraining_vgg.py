@@ -25,9 +25,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLRO
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score, precision_score, recall_score
 import itertools
 
-# Histogram Equalization
-import histogram_equalization
- 
+from skimage import exposure
 
 import logging
 from tensorflow.keras.models import load_model
@@ -61,19 +59,21 @@ test_normal_dir = os.path.join(test_dir, 'normal')
 test_pneumonia_dir = os.path.join(test_dir, 'pneumonia')
 
 INPUT_SIZE = 100
-BATCH_SIZE = 16
+BATCH_SIZE = 30
 
 
 """ Investigate train - val - test datasets """
 
-train_batches = ImageDataGenerator(rescale = 1 / 255.,preprocessing_function=histogram_equalization.histogram_equalization).flow_from_directory(train_dir,
+train_batches = ImageDataGenerator(rescale = 1 / 255.,
+                                   preprocessing_function=exposure.equalize_hist).flow_from_directory(train_dir,
                                                          target_size=(INPUT_SIZE,INPUT_SIZE),
                                                          class_mode='categorical',
                                                          shuffle=True,
                                                          seed=42,
                                                          batch_size=BATCH_SIZE)
 
-val_batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(val_dir,
+val_batches = ImageDataGenerator(rescale = 1 / 255.,
+                                   preprocessing_function=exposure.equalize_hist).flow_from_directory(val_dir,
                                                          target_size=(INPUT_SIZE,INPUT_SIZE),
                                                          class_mode='categorical',
                                                          shuffle=True,
@@ -121,6 +121,8 @@ print('\u2022 {} pneumonia images'.format(num_pneumonia_test))
 
 MODEL_FNAME = 'embedding_network.h5'
 
+tf.compat.v1.reset_default_graph()
+
 if not os.path.exists(MODEL_FNAME):
 
     """ Create the model """
@@ -150,7 +152,7 @@ if not os.path.exists(MODEL_FNAME):
     
     embedding_network = Model(inputs=[base_model.input], outputs=[x])
     
-    optimizer = Adam(learning_rate=0.000001) 
+    optimizer = Adam(learning_rate=0.001) 
     embedding_network.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=["accuracy"])
     embedding_network.summary()
     
@@ -160,6 +162,8 @@ if not os.path.exists(MODEL_FNAME):
     
     checkpointer = ModelCheckpoint(filepath='embedding_network.h5', verbose=1, 
                                    save_best_only=True)
+    
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.000001)
         
     """ Train the model """
     
