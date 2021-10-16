@@ -72,14 +72,14 @@ embedding_network.trainable = True
 # neurons, sigmoid activation function, and L2 kernel regularizer
 def tower(inputs, embedding_network):
     x = Flatten()(embedding_network(inputs))
-    outputs = Dense(5120, activation='sigmoid')(x)
+    outputs = Dense(5120, activation='sigmoid', kernel_regularizer='l2')(x)
     model = Model(inputs, outputs=[outputs])
     return model
 
 tower_1 = tower(input_1, embedding_network)
 tower_2 = tower(input_2, embedding_network)
 
-merge_layer = utils.manhatan_distance([tower_1.output, tower_2.output])
+merge_layer = utils.manhattan_distance([tower_1.output, tower_2.output])
 output_layer = Dense(1, activation="sigmoid")(merge_layer)
 
 siamese = Model(inputs=[tower_1.input, tower_2.input], outputs=[output_layer])

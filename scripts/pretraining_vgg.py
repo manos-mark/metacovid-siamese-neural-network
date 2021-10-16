@@ -59,21 +59,19 @@ test_normal_dir = os.path.join(test_dir, 'normal')
 test_pneumonia_dir = os.path.join(test_dir, 'pneumonia')
 
 INPUT_SIZE = 100
-BATCH_SIZE = 30
+BATCH_SIZE = 16
 
 
 """ Investigate train - val - test datasets """
 
-train_batches = ImageDataGenerator(rescale = 1 / 255.,
-                                   preprocessing_function=exposure.equalize_hist).flow_from_directory(train_dir,
+train_batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(train_dir,
                                                          target_size=(INPUT_SIZE,INPUT_SIZE),
                                                          class_mode='categorical',
                                                          shuffle=True,
                                                          seed=42,
                                                          batch_size=BATCH_SIZE)
 
-val_batches = ImageDataGenerator(rescale = 1 / 255.,
-                                   preprocessing_function=exposure.equalize_hist).flow_from_directory(val_dir,
+val_batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(val_dir,
                                                          target_size=(INPUT_SIZE,INPUT_SIZE),
                                                          class_mode='categorical',
                                                          shuffle=True,
@@ -137,22 +135,12 @@ if not os.path.exists(MODEL_FNAME):
     
     last_output = base_model.output
     
-    x = Dropout(0.5)(last_output)
-    
-    x = Dense(512, activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Dropout(0.5)(x)
-    
-    x = Dense(256, activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Dropout(0.5)(x)
-    
-    x = Flatten()(x)
+    x = Flatten()(last_output)
     x = Dense(3, activation='softmax')(x)
     
     embedding_network = Model(inputs=[base_model.input], outputs=[x])
     
-    optimizer = Adam(learning_rate=0.001) 
+    optimizer = Adam(learning_rate=0.00001) 
     embedding_network.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=["accuracy"])
     embedding_network.summary()
     
@@ -162,9 +150,7 @@ if not os.path.exists(MODEL_FNAME):
     
     checkpointer = ModelCheckpoint(filepath='embedding_network.h5', verbose=1, 
                                    save_best_only=True)
-    
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.000001)
-        
+            
     """ Train the model """
     
     history = embedding_network.fit(
@@ -199,7 +185,7 @@ else:
     
     class_labels = list(test_batches.class_indices.keys())   
     
-    cm = confusion_matrix(test_batches.classes, y_pred, normalize='all')    
+    cm = confusion_matrix(test_batches.classes, y_pred)    
     cm_display = ConfusionMatrixDisplay(cm, class_labels).plot()
     
     # results = model.evaluate_generator(test_batches)
