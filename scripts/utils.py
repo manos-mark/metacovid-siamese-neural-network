@@ -67,7 +67,6 @@ def preprocess(array):
     """
     processed_imgs = np.zeros((len(array), 100, 100, 3))
     
-    print(array[0].shape)
     for i, img in enumerate(array):
         # rescale to have values within 0 - 1 range [0,255] --> [0,1] 
         img = img.astype('float32') / 255.0

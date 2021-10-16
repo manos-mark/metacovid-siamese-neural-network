@@ -2,11 +2,12 @@
 import scripts.utils as utils
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.layers import Dense, Input, Flatten
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 import numpy as np
 import os
+from tensorflow.keras.regularizers import l2
 
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
@@ -31,8 +32,8 @@ print("The train set contains",len(train_image_list))
 valid_image_list, valid_y_list = utils.load_images(basedir, 'validation')   
 print("The valid set contains", len(valid_image_list))  
 
-# test_image_list, test_y_list = load_images(basedir, 'test')   
-# print("The test set contains", len(test_image_list))  
+test_image_list, test_y_list = utils.load_images(basedir, 'test')   
+print("The test set contains", len(test_image_list))  
 
 
 # make train pairs
@@ -42,28 +43,21 @@ pairs_train, labels_train = utils.make_pairs(train_image_list, train_y_list)
 pairs_val, labels_val = utils.make_pairs(valid_image_list, valid_y_list)
 
 # make test pairs
-#pairs_test, labels_test = make_pairs(test_image_list, test_y_list)
+pairs_test, labels_test = utils.make_pairs(test_image_list, test_y_list)
 
 x_train_1 = pairs_train[:, 0]  
 x_train_2 = pairs_train[:, 1]
-
-print(type(x_train_1))# np.array
-print("number of pairs for training", np.shape(x_train_1)[0]) # we have 60 pairs
-
-print(np.shape(x_train_1[0]))
+print("number of pairs for training", np.shape(x_train_1)[0]) 
 
 x_val_1 = pairs_val[:, 0] 
 x_val_2 = pairs_val[:, 1]
+print("number of pairs for validation", np.shape(x_val_1)[0]) 
 
-print(type(x_train_1))# np.array
-print("number of pairs for validation", np.shape(x_train_1)[0]) # we have 60 pairs
+x_test_1 = pairs_test[:, 0] 
+x_test_2 = pairs_test[:, 1]
+print("number of pairs for test", np.shape(x_test_1)[0]) 
 
-# x_test_1 = pairs_test[:, 0] 
-# x_test_2 = pairs_test[:, 1]
-
-print(type(x_train_1))# np.array
-print("number of pairs for test", np.shape(x_train_1)[0]) # we have 60 pairs
-
+# utils.visualize(pairs_train[:-1], labels_train[:-1], to_show=4, num_col=4)
 
 input_1 = Input((100,100,3))
 input_2 = Input((100,100,3))
@@ -76,8 +70,15 @@ embedding_network.trainable = False
 # model we add a flatten layer which is followed by a dense layer with 5120 
 # neurons, sigmoid activation function, and L2 kernel regularizer
 
-tower_1 = embedding_network(input_1)
-tower_2 = embedding_network(input_2)
+last_output = embedding_network.output
+    
+x = Flatten()(last_output)
+x = Dense(5120, activation='sigmoid')(x)
+print(x.shape)
+tower_1 = Model(inputs=[input_1], outputs=[x])
+tower_2 = Model(inputs=[input_2], outputs=[x])
+# tower_1 = embedding_network(input_1)
+# tower_2 = embedding_network(input_2)
 
 merge_layer = utils.manhattan_distance([tower_1, tower_2])
 output_layer = Dense(1, activation="sigmoid")(merge_layer)
@@ -89,6 +90,7 @@ siamese.summary()
 
 # reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,patience=5, min_lr=0.000001)
 early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+
 checkpointer = ModelCheckpoint(filepath='siamese_network.h5', verbose=1, 
                                 save_best_only=True)
 
