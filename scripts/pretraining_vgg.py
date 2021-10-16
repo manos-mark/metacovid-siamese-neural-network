@@ -59,7 +59,7 @@ test_normal_dir = os.path.join(test_dir, 'normal')
 test_pneumonia_dir = os.path.join(test_dir, 'pneumonia')
 
 INPUT_SIZE = 100
-BATCH_SIZE = 16
+BATCH_SIZE = 54
 
 
 """ Investigate train - val - test datasets """
@@ -194,3 +194,4 @@ else:
     print("Precision:", precision_score(y_test, y_pred, average='weighted'))
     print("Recall:", recall_score(y_test, y_pred, average='weighted'))
     
+tf.keras.backend.clear_session()

@@ -114,3 +114,5 @@ utils.plt_metric(history=history.history, metric="acc", title="Model accuracy")
 
 # Plot the constrastive loss
 utils.plt_metric(history=history.history, metric="loss", title="Constrastive Loss")
+
+tf.keras.backend.clear_session()
