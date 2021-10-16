@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import math
 
-import scripts.utils as utils
+import utils as utils
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.preprocessing import image

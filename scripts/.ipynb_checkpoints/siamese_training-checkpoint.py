@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import scripts.utils as utils
+import utils as utils
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Input, Flatten
@@ -69,24 +69,21 @@ embedding_network.trainable = False
 # add here as the output of embedding network Towards the end of the pretrained 
 # model we add a flatten layer which is followed by a dense layer with 5120 
 # neurons, sigmoid activation function, and L2 kernel regularizer
-def tower(inputs_m):
-    inputs =inputs_m    
-    x = Flatten()(embedding_network(inputs))
-    outputs = Dense(5120, activation='sigmoid')(x)
-    model = Model(inputs,outputs= [outputs])
-    return model
-# print(x.shape)
-tower_1 = tower(input_1)
-tower_2 = tower(input_2)
-# tower_1 = Model(inputs=[embedding_network.input], outputs=[x])
-# tower_2 = Model(inputs=[embedding_network.input], outputs=[x])
+
+last_output = embedding_network.output
+    
+x = Flatten()(last_output)
+x = Dense(5120, activation='sigmoid')(x)
+print(x.shape)
+tower_1 = Model(inputs=[input_1], outputs=[x])
+tower_2 = Model(inputs=[input_2], outputs=[x])
 # tower_1 = embedding_network(input_1)
 # tower_2 = embedding_network(input_2)
 
-merge_layer = utils.manhattan_distance([tower_1.output, tower_2.output])
+merge_layer = utils.manhattan_distance([tower_1, tower_2])
 output_layer = Dense(1, activation="sigmoid")(merge_layer)
 
-siamese = Model(inputs=[tower_1.input, tower_2.input], outputs=[output_layer])
+siamese = Model(inputs=[input_1, input_2], outputs=[output_layer])
 siamese.summary()
 
 """ callbacks """
