@@ -55,7 +55,7 @@ def make_pairs(x, y):
         pairs += [[x1, x2]]
         labels += [0]
 
-    return np.array(pairs, dtype=object), np.array(labels, dtype=object).astype("float32")
+    return np.array(pairs), np.array(labels).astype("float32")
 
     
 """ Load the dataset and prepare pairs"""
