@@ -5,11 +5,9 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Input, Flatten, Lambda
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-import tensorflow.keras.backend as K
 
 import numpy as np
 import os
-from tensorflow.keras.regularizers import l2
 
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
@@ -32,11 +30,17 @@ print("The train set contains",len(train_image_list))
 valid_image_list, valid_y_list = utils.load_images(basedir, 'validation', (100,100))   
 print("The valid set contains", len(valid_image_list))  
 
+test_image_list, test_y_list = utils.load_images(basedir, 'test', (100,100))   
+print("The test set contains", len(test_image_list))  
+
 # make train pairs
 pairs_train, labels_train = utils.make_pairs(train_image_list, train_y_list)
 
 # make validation pairs
 pairs_val, labels_val = utils.make_pairs(valid_image_list, valid_y_list)
+
+# make test pairs
+pairs_test, labels_test = utils.make_pairs(test_image_list, test_y_list)
 
 x_train_1 = pairs_train[:, 0]  
 x_train_2 = pairs_train[:, 1]
@@ -45,6 +49,10 @@ print("number of pairs for training", np.shape(x_train_1)[0])
 x_val_1 = pairs_val[:, 0] 
 x_val_2 = pairs_val[:, 1]
 print("number of pairs for validation", np.shape(x_val_1)[0]) 
+
+x_test_1 = pairs_test[:, 0] 
+x_test_2 = pairs_test[:, 1]
+print("number of pairs for test", np.shape(x_test_1)[0]) 
 
 # utils.visualize(pairs_train[:-1], labels_train[:-1], to_show=4, num_col=4)
 
@@ -55,11 +63,6 @@ EMBEDDING_MODEL_FNAME = 'embedding_network.h5'
 
 if not os.path.exists(SIAMESE_MODEL_FNAME):
     
-    """ L1 mistance - manhattan """
-    def manhattan_distance(vects):
-        x, y = vects
-        return K.sum(K.abs(x-y), axis=1, keepdims=True)
-
     input_1 = Input((100,100,3))
     input_2 = Input((100,100,3))
     
@@ -67,7 +70,7 @@ if not os.path.exists(SIAMESE_MODEL_FNAME):
     embedding_network.trainable = False
     
     model = tf.keras.Sequential() 
-    for layer in embedding_network.layers: # go through until last layer 
+    for layer in embedding_network.layers:  
         model.add(layer) 
     
     model.add(Flatten(name='flat'))
@@ -76,7 +79,7 @@ if not os.path.exists(SIAMESE_MODEL_FNAME):
     output_1 = model(input_1) 
     output_2 = model(input_2) 
      
-    merge_layer = Lambda(manhattan_distance)([output_1, output_2]) 
+    merge_layer = Lambda(utils.manhattan_distance)([output_1, output_2]) 
     output_layer = Dense(1, activation="sigmoid")(merge_layer) 
     siamese = Model(inputs=[input_1, input_2], outputs=output_layer) 
     siamese.summary()
@@ -112,20 +115,13 @@ if not os.path.exists(SIAMESE_MODEL_FNAME):
     # Plot the constrastive loss
     utils.plt_metric(history=history.history, metric="loss", title="Constrastive Loss")
     
+    results = siamese.evaluate([x_test_1, x_test_2], labels_test)
+    print("test loss, test acc:", results)
+    
 else:
     """ Test the model """
     
-    test_image_list, test_y_list = utils.load_images(basedir, 'test', (100,100))   
-    print("The test set contains", len(test_image_list))  
-    
-    # make test pairs
-    pairs_test, labels_test = utils.make_pairs(test_image_list, test_y_list)
-    
-    x_test_1 = pairs_test[:, 0] 
-    x_test_2 = pairs_test[:, 1]
-    print("number of pairs for test", np.shape(x_test_1)[0]) 
-
-    model = tf.keras.models.load_model(SIAMESE_MODEL_FNAME)
+    model = tf.keras.models.load_model(SIAMESE_MODEL_FNAME, custom_objects={ 'loss': loss(margin), 'manhattan_distance': manhattan_distance() })
     model.summary()
     
     results = siamese.evaluate([x_test_1, x_test_2], labels_test)
