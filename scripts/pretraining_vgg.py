@@ -54,15 +54,11 @@ val_covid_dir = os.path.join(val_dir, 'covid')
 val_normal_dir = os.path.join(val_dir, 'normal')
 val_pneumonia_dir = os.path.join(val_dir, 'pneumonia')
 
-test_covid_dir = os.path.join(test_dir, 'covid')
-test_normal_dir = os.path.join(test_dir, 'normal')
-test_pneumonia_dir = os.path.join(test_dir, 'pneumonia')
-
 INPUT_SIZE = 100
 BATCH_SIZE = 54
 
 
-""" Investigate train - val - test datasets """
+""" Investigate train - val datasets """
 
 train_batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(train_dir,
                                                          target_size=(INPUT_SIZE,INPUT_SIZE),
@@ -78,13 +74,6 @@ val_batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(val_dir
                                                          seed=42,
                                                          batch_size=BATCH_SIZE)
 
-test_batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(test_dir,
-                                                         target_size=(INPUT_SIZE,INPUT_SIZE),
-                                                         class_mode='categorical',
-                                                         shuffle=False,
-                                                         seed=42,
-                                                         batch_size=BATCH_SIZE)
-
 num_covid_train = int(len(os.listdir(train_covid_dir)))
 num_normal_train = int(len(os.listdir(train_normal_dir)))
 num_pneumonia_train = int(len(os.listdir(train_pneumonia_dir)))
@@ -93,14 +82,9 @@ num_covid_val = int(len(os.listdir(val_covid_dir)))
 num_normal_val = int(len(os.listdir(val_normal_dir)))
 num_pneumonia_val = int(len(os.listdir(val_pneumonia_dir)))
 
-num_covid_test = int(len(os.listdir(test_covid_dir)))
-num_normal_test = int(len(os.listdir(test_normal_dir)))
-num_pneumonia_test = int(len(os.listdir(test_pneumonia_dir)))
-
 print('The dataset contains:')
 print('\u2022 {} training images'.format(num_covid_train + num_normal_train + num_pneumonia_train))
 print('\u2022 {} validation images'.format(num_covid_val + num_normal_val + num_pneumonia_val))
-print('\u2022 {} test images'.format(num_covid_test + num_normal_test + num_pneumonia_test))
 
 print('\nThe training set contains:')
 print('\u2022 {} covid images'.format(num_covid_train))
@@ -111,11 +95,6 @@ print('\nThe validation set contains:')
 print('\u2022 {} covid images'.format(num_covid_val))
 print('\u2022 {} normal images'.format(num_normal_val))
 print('\u2022 {} pneumonia images'.format(num_pneumonia_val))
-
-print('\nThe test set contains:')
-print('\u2022 {} covid images'.format(num_covid_test))
-print('\u2022 {} normal images'.format(num_normal_test))
-print('\u2022 {} pneumonia images'.format(num_pneumonia_test))
 
 MODEL_FNAME = 'embedding_network.h5'
 
@@ -171,8 +150,29 @@ if not os.path.exists(MODEL_FNAME):
 
     
     print("End of Training, the model is saved to", MODEL_FNAME)  
-    tf.keras.backend.clear_session()
+
 else:
+    
+    test_batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(test_dir,
+                                                         target_size=(INPUT_SIZE,INPUT_SIZE),
+                                                         class_mode='categorical',
+                                                         shuffle=False,
+                                                         seed=42,
+                                                         batch_size=BATCH_SIZE)
+    
+    test_covid_dir = os.path.join(test_dir, 'covid')
+    test_normal_dir = os.path.join(test_dir, 'normal')
+    test_pneumonia_dir = os.path.join(test_dir, 'pneumonia')
+    
+    num_covid_test = int(len(os.listdir(test_covid_dir)))
+    num_normal_test = int(len(os.listdir(test_normal_dir)))
+    num_pneumonia_test = int(len(os.listdir(test_pneumonia_dir)))
+
+    print('\nThe test set contains:')
+    print('\u2022 {} covid images'.format(num_covid_test))
+    print('\u2022 {} normal images'.format(num_normal_test))
+    print('\u2022 {} pneumonia images'.format(num_pneumonia_test))
+
     """ Test the model """
     model = tf.keras.models.load_model(MODEL_FNAME)
     model.summary()
