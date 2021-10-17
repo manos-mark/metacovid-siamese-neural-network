@@ -61,71 +61,71 @@ tf.compat.v1.reset_default_graph()
 SIAMESE_MODEL_FNAME = 'siamese_network.h5'
 EMBEDDING_MODEL_FNAME = 'embedding_network.h5'
 
-if not os.path.exists(SIAMESE_MODEL_FNAME):
+# if not os.path.exists(SIAMESE_MODEL_FNAME):
     
-    input_1 = Input((100,100,3))
-    input_2 = Input((100,100,3))
+input_1 = Input((100,100,3))
+input_2 = Input((100,100,3))
+
+embedding_network = tf.keras.models.load_model(EMBEDDING_MODEL_FNAME)
+embedding_network.trainable = False
+
+model = tf.keras.Sequential() 
+for layer in embedding_network.layers:  
+    model.add(layer) 
+
+model.add(Flatten(name='flat'))
+model.add(Dense(5120, name='den', activation='sigmoid', kernel_regularizer='l2')) 
+ 
+output_1 = model(input_1) 
+output_2 = model(input_2) 
+ 
+merge_layer = Lambda(utils.manhattan_distance)([output_1, output_2]) 
+output_layer = Dense(1, activation="sigmoid")(merge_layer) 
+siamese = Model(inputs=[input_1, input_2], outputs=output_layer) 
+siamese.summary()
+
+""" callbacks """
+
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.000001)
+
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+
+checkpointer = ModelCheckpoint(filepath='siamese_network.h5', verbose=1, 
+                                save_best_only=True)
+
+""" train the model """
+
+optimizer = Adam(learning_rate=0.0001)
+siamese.compile(loss=utils.loss(1), optimizer=optimizer, metrics=["accuracy"])
+# siamese.compile(loss='sparse_categorical_crossentropy', optimizer=optimizer, metrics=["accuracy"])
+
+siamese.summary()
+history = siamese.fit([x_train_1, x_train_2],
+    labels_train,
+    validation_data=([x_val_1, x_val_2], labels_val),
+    batch_size=1,
+    # steps_per_epoch=10,
+    epochs=175,   # 175 for contrastive 100 for cross ent
+    callbacks = [checkpointer, early_stopping, reduce_lr]
+)
+
+# Plot the accuracy
+utils.plt_metric(history=history.history, metric="acc", title="Model accuracy")
+
+# Plot the constrastive loss
+utils.plt_metric(history=history.history, metric="loss", title="Constrastive Loss")
+
+results = siamese.evaluate([x_test_1, x_test_2], labels_test)
+print("test loss, test acc:", results)
     
-    embedding_network = tf.keras.models.load_model(EMBEDDING_MODEL_FNAME)
-    embedding_network.trainable = False
+# else:
+#     """ Test the model """
     
-    model = tf.keras.Sequential() 
-    for layer in embedding_network.layers:  
-        model.add(layer) 
+#     model = tf.keras.models.load_model(SIAMESE_MODEL_FNAME, custom_objects={ 'loss': loss(margin), 'manhattan_distance': manhattan_distance() })
+#     model.summary()
     
-    model.add(Flatten(name='flat'))
-    model.add(Dense(5120, name='den', activation='sigmoid', kernel_regularizer='l2')) 
-     
-    output_1 = model(input_1) 
-    output_2 = model(input_2) 
-     
-    merge_layer = Lambda(utils.manhattan_distance)([output_1, output_2]) 
-    output_layer = Dense(1, activation="sigmoid")(merge_layer) 
-    siamese = Model(inputs=[input_1, input_2], outputs=output_layer) 
-    siamese.summary()
-    
-    """ callbacks """
-    
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.000001)
-    
-    early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
-    
-    checkpointer = ModelCheckpoint(filepath='siamese_network.h5', verbose=1, 
-                                    save_best_only=True)
-    
-    """ train the model """
-    
-    optimizer = Adam(learning_rate=0.0001)
-    siamese.compile(loss=utils.loss(1), optimizer=optimizer, metrics=["accuracy"])
-    # siamese.compile(loss='sparse_categorical_crossentropy', optimizer=optimizer, metrics=["accuracy"])
-    
-    siamese.summary()
-    history = siamese.fit([x_train_1, x_train_2],
-        labels_train,
-        validation_data=([x_val_1, x_val_2], labels_val),
-        batch_size=1,
-        # steps_per_epoch=10,
-        epochs=175,   # 175 for contrastive 100 for cross ent
-        callbacks = [checkpointer, early_stopping, reduce_lr]
-    )
-    
-    # Plot the accuracy
-    utils.plt_metric(history=history.history, metric="acc", title="Model accuracy")
-    
-    # Plot the constrastive loss
-    utils.plt_metric(history=history.history, metric="loss", title="Constrastive Loss")
-    
-    results = siamese.evaluate([x_test_1, x_test_2], labels_test)
-    print("test loss, test acc:", results)
-    
-else:
-    """ Test the model """
-    
-    model = tf.keras.models.load_model(SIAMESE_MODEL_FNAME, custom_objects={ 'loss': loss(margin), 'manhattan_distance': manhattan_distance() })
-    model.summary()
-    
-    results = siamese.evaluate([x_test_1, x_test_2], labels_test)
-    print("test loss, test acc:", results)
+#     results = siamese.evaluate([x_test_1, x_test_2], labels_test)
+#     print("test loss, test acc:", results)
 
     
     # y_test = test_batches.classes
