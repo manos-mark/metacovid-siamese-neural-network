@@ -65,26 +65,40 @@ input_1 = Input((100,100,3))
 input_2 = Input((100,100,3))
 
 embedding_network = tf.keras.models.load_model(MODEL_FNAME)
-embedding_network.trainable = True
+embedding_network.trainable = False
 
 # add here as the output of embedding network Towards the end of the pretrained 
 # model we add a flatten layer which is followed by a dense layer with 5120 
 # neurons, sigmoid activation function, and L2 kernel regularizer
-def tower(inputs, embedding_network):
-    # print(type(embedding_network.layers[-2]))
-    # print(type(embedding_network))
-    x = embedding_network(inputs)
-    outputs = Dense(5120, activation='sigmoid', kernel_regularizer='l2')(x)
-    model = Model(inputs, outputs=[outputs])
-    return model
+# def tower(inputs, embedding_network):
+#     # print(type(embedding_network.layers[-2]))
+#     # print(type(embedding_network))
+#     x = embedding_network(inputs)
+#     outputs = Dense(5120, activation='sigmoid', kernel_regularizer='l2')(x)
+#     model = Model(inputs, outputs=[outputs])
+#     return model
 
-tower_1 = tower(input_1, embedding_network)
-tower_2 = tower(input_2, embedding_network)
+# tower_1 = tower(input_1, embedding_network)
+# tower_2 = tower(input_2, embedding_network)
 
-merge_layer = utils.manhattan_distance([tower_1.output, tower_2.output])
-output_layer = Dense(1, activation="sigmoid")(merge_layer)
+# merge_layer = tf.keras.layers.Lambda(utils.manhattan_distance)([tower_1.output, tower_2.output])
+# output_layer = Dense(1, activation="sigmoid")(merge_layer)
 
-siamese = Model(inputs=[tower_1.input, tower_2.input], outputs=[output_layer])
+# siamese = Model(inputs=[tower_1.input, tower_2.input], outputs=[output_layer])
+# siamese.summary()
+
+model = tf.keras.Sequential() 
+for layer in embedding_network.layers[:-1]: # go through until last layer 
+    model.add(layer) 
+ 
+model.add(Dense(5120, activation='sigmoid', kernel_regularizer='l2')) 
+ 
+output_1 = model(input_1) 
+output_2 = model(input_2) 
+ 
+merge_layer = tf.keras.layers.Lambda(utils.manhattan_distance)([output_1, output_2]) 
+output_layer = Dense(1, activation="sigmoid")(merge_layer) 
+siamese = Model(inputs=[input_1, input_2], outputs=output_layer) 
 siamese.summary()
 
 """ callbacks """
