@@ -86,7 +86,7 @@ if not os.path.exists(SIAMESE_MODEL_FNAME):
     
     """ callbacks """
     
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001)
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.00001)
     
     early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1, min_delta=0.0001)
     
