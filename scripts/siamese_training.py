@@ -26,13 +26,13 @@ MODEL_FNAME = 'embedding_network.h5'
         
 basedir = os.path.join("dataset", "siamese") 
 
-train_image_list, train_y_list = utils.load_images(basedir, 'train')
+train_image_list, train_y_list = utils.load_images(basedir, 'train', (100,100))
 print("The train set contains",len(train_image_list)) 
 
-valid_image_list, valid_y_list = utils.load_images(basedir, 'validation')   
+valid_image_list, valid_y_list = utils.load_images(basedir, 'validation', (100,100))   
 print("The valid set contains", len(valid_image_list))  
 
-test_image_list, test_y_list = utils.load_images(basedir, 'test')   
+test_image_list, test_y_list = utils.load_images(basedir, 'test', (100,100))   
 print("The test set contains", len(test_image_list))  
 
 
@@ -71,7 +71,9 @@ embedding_network.trainable = True
 # model we add a flatten layer which is followed by a dense layer with 5120 
 # neurons, sigmoid activation function, and L2 kernel regularizer
 def tower(inputs, embedding_network):
-    x = Flatten()(embedding_network(inputs))
+    # print(type(embedding_network.layers[-2]))
+    # print(type(embedding_network))
+    x = embedding_network(inputs)
     outputs = Dense(5120, activation='sigmoid', kernel_regularizer='l2')(x)
     model = Model(inputs, outputs=[outputs])
     return model

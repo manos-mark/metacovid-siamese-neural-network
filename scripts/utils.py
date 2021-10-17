@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import tensorflow.keras.backend as K
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -28,7 +29,7 @@ def loss(margin=1):
     return contrastive_loss
 
 def make_pairs(x, y):
-    num_classes = max(y) + 1
+    num_classes = int(max(y) + 1)
     digit_indices = [np.where(y == i)[0] for i in range(num_classes)]
 
     pairs = []
@@ -37,7 +38,7 @@ def make_pairs(x, y):
     for idx1 in range(len(x)):
         # add a matching example
         x1 = x[idx1]
-        label1 = y[idx1]
+        label1 = int(y[idx1])
         idx2 = random.choice(digit_indices[label1])
         x2 = x[idx2]
 
@@ -71,34 +72,56 @@ def preprocess(array):
         # rescale to have values within 0 - 1 range [0,255] --> [0,1] 
         img = img.astype('float32') / 255.0
         
+        if len(img.shape) > 2:
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        
         # resize the image 
-        img = np.resize(img, (100, 100, 3))
+        img = cv2.resize(img, dsize=(100, 100))
+        img = img[..., np.newaxis]
+        # img = np.dstack((img, img))
+        # img = np.dstack((img, img))
+        # img = np.reshape(img, (100, 100, 3))
+        
+        # print(img.shape)
+        # plt.imshow(img, cmap='gray')
+        # plt.show()
+        # return
         
         processed_imgs[i,:,:] = img
         
     return processed_imgs
 
-def load_images(basedir, path):
-    image_list = []
-    y_list = []
+# def load_images(basedir, path, inp):
+#     image_list = []
+#     y_list = []
     
-    CLASS_NAMES = ["covid", "normal", "pneumonia"]
-    classes = dict(zip(CLASS_NAMES, range(len(CLASS_NAMES))))
+#     CLASS_NAMES = ["covid", "normal", "pneumonia"]
+#     classes = dict(zip(CLASS_NAMES, range(len(CLASS_NAMES))))
 
-    for classdir in os.listdir(os.path.join(basedir, path)):
-        for filename in os.listdir(os.path.join(basedir, path, classdir)):
-            impath = os.path.join(basedir, path, classdir, filename)
-            if not os.path.isfile(impath):
-                raise ValueError('Image name doesnt exist') 
-            im = cv2.imread(impath, cv2.IMREAD_UNCHANGED)
-            image_list.append(im)
-            y_list.append(classes[classdir])
+#     for classdir in os.listdir(os.path.join(basedir, path)):
+#         for filename in os.listdir(os.path.join(basedir, path, classdir)):
+#             impath = os.path.join(basedir, path, classdir, filename)
+#             if not os.path.isfile(impath):
+#                 raise ValueError('Image name doesnt exist') 
+#             im = cv2.imread(impath, cv2.IMREAD_UNCHANGED)
+#             image_list.append(im)
+#             y_list.append(classes[classdir])
     
-    image_list = np.array(image_list, dtype=object)
-    y_list = np.array(y_list, dtype=object)
+#     image_list = np.array(image_list, dtype=object)
+#     y_list = np.array(y_list, dtype=object)
     
-    image_list = preprocess(image_list)        
-    return image_list, y_list
+#     image_list = preprocess(image_list)   
+#     print(type(image_list), type(y_list))     
+#     print(image_list.shape, y_list.shape)    
+#     return image_list, y_list
+
+def load_images(basedir, path, input_size):
+    batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(os.path.join(basedir, path),
+                                                          target_size=(input_size),
+                                                          class_mode='sparse',
+                                                          shuffle=True,
+                                                          seed=42)   
+    return batches[0][0], batches[0][1]
 
 def visualize(pairs, labels, to_show=6, num_col=3, predictions=None, test=False):
     """Creates a plot of pairs and labels, and prediction if it's test dataset.
