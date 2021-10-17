@@ -115,12 +115,14 @@ def preprocess(array):
 #     print(image_list.shape, y_list.shape)    
 #     return image_list, y_list
 
-def load_images(basedir, path, input_size):
+def load_images(basedir, path, input_size, batch_size=10):
     batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(os.path.join(basedir, path),
                                                           target_size=(input_size),
-                                                          class_mode='sparse',
+                                                          batch_size=batch_size,
+                                                          class_mode='binary',
                                                           shuffle=True,
                                                           seed=42)   
+
     return batches[0][0], batches[0][1]
 
 def visualize(pairs, labels, to_show=6, num_col=3, predictions=None, test=False):

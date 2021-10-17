@@ -2,7 +2,7 @@
 import scripts.utils as utils
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Input, Flatten
+from tensorflow.keras.layers import Dense, Input, Flatten, Lambda
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 import numpy as np
@@ -67,36 +67,17 @@ input_2 = Input((100,100,3))
 embedding_network = tf.keras.models.load_model(MODEL_FNAME)
 embedding_network.trainable = False
 
-# add here as the output of embedding network Towards the end of the pretrained 
-# model we add a flatten layer which is followed by a dense layer with 5120 
-# neurons, sigmoid activation function, and L2 kernel regularizer
-# def tower(inputs, embedding_network):
-#     # print(type(embedding_network.layers[-2]))
-#     # print(type(embedding_network))
-#     x = embedding_network(inputs)
-#     outputs = Dense(5120, activation='sigmoid', kernel_regularizer='l2')(x)
-#     model = Model(inputs, outputs=[outputs])
-#     return model
-
-# tower_1 = tower(input_1, embedding_network)
-# tower_2 = tower(input_2, embedding_network)
-
-# merge_layer = tf.keras.layers.Lambda(utils.manhattan_distance)([tower_1.output, tower_2.output])
-# output_layer = Dense(1, activation="sigmoid")(merge_layer)
-
-# siamese = Model(inputs=[tower_1.input, tower_2.input], outputs=[output_layer])
-# siamese.summary()
-
 model = tf.keras.Sequential() 
-for layer in embedding_network.layers[:-1]: # go through until last layer 
+for layer in embedding_network.layers: # go through until last layer 
     model.add(layer) 
- 
-model.add(Dense(5120, activation='sigmoid', kernel_regularizer='l2')) 
+
+model.add(Flatten(name='flat'))
+model.add(Dense(5120, name='den', activation='sigmoid', kernel_regularizer='l2')) 
  
 output_1 = model(input_1) 
 output_2 = model(input_2) 
  
-merge_layer = tf.keras.layers.Lambda(utils.manhattan_distance)([output_1, output_2]) 
+merge_layer = Lambda(utils.manhattan_distance)([output_1, output_2]) 
 output_layer = Dense(1, activation="sigmoid")(merge_layer) 
 siamese = Model(inputs=[input_1, input_2], outputs=output_layer) 
 siamese.summary()
@@ -114,12 +95,13 @@ checkpointer = ModelCheckpoint(filepath='siamese_network.h5', verbose=1,
 
 optimizer = Adam(learning_rate=0.0001)
 siamese.compile(loss=utils.loss(1), optimizer=optimizer, metrics=["accuracy"])
-                 
+# siamese.compile(loss='sparse_categorical_crossentropy', optimizer=optimizer, metrics=["accuracy"])
+
 siamese.summary()
 history = siamese.fit([x_train_1, x_train_2],
     labels_train,
     validation_data=([x_val_1, x_val_2], labels_val),
-    batch_size=10,
+    batch_size=1,
     # steps_per_epoch=10,
     epochs=175,   # 175 for contrastive 100 for cross ent
     callbacks = [checkpointer, early_stopping, reduce_lr]
