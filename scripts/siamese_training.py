@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Input, Flatten, Lambda
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score, f1_score
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score, precision_score, recall_score, roc_auc_score, f1_score
 
 import numpy as np
 import os
@@ -104,7 +104,7 @@ history = siamese.fit([x_train_1, x_train_2],
     labels_train,
     validation_data=([x_val_1, x_val_2], labels_val),
     batch_size=1,
-    epochs=2,#175,   # 175 for contrastive 100 for cross ent
+    epochs=175,   # 175 for contrastive 100 for cross ent
     callbacks = [checkpointer, early_stopping, reduce_lr]
 )
 
@@ -119,8 +119,8 @@ utils.plt_metric(history=history.history, metric="loss", title="Constrastive Los
 results = siamese.evaluate([x_test_1, x_test_2], labels_test)
 print("test loss, test acc:", results)
 
-Y_pred = model.predict([x_test_1, x_test_2], labels_test)
-y_pred = np.argmax(Y_pred, axis=1)
+Y_pred = siamese.predict([x_test_1, x_test_2]).squeeze()
+y_pred = Y_pred > Y_pred.mean()
 y_test = labels_test
 
 print("\nEvaluate on test data")
@@ -130,15 +130,11 @@ print("Recall:", recall_score(y_test, y_pred, average='weighted'))
 print("ROC AUC:", roc_auc_score(y_test, y_pred, average='weighted'))
 print("F1:", f1_score(y_test, y_pred, average='weighted'))
 
+cm = confusion_matrix(y_test, y_pred)    
+# cm_display = ConfusionMatrixDisplay(cm, labels_test).plot()
 
-
-# class_labels = list(labels_test.keys())   
-
-# cm = confusion_matrix(y_test, y_pred)    
-# cm_display = ConfusionMatrixDisplay(cm, class_labels).plot()
-
-# tn, fp, fn, tp = cm.ravel()
-# specificity = tn / (tn+fp)
-# print("Specificity:", specificity)
+tn, fp, fn, tp = cm.ravel()
+specificity = tn / (tn+fp)
+print("Specificity:", specificity)
 
 tf.keras.backend.clear_session()
