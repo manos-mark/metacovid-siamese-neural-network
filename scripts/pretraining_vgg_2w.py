@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import math
 
-import scripts.utils as utils
+import scripts.utils as utils 
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.preprocessing import image
@@ -40,7 +40,7 @@ print('\t\u2022 Running on GPU' if tf.test.is_gpu_available() else '\t\u2022 GPU
 
 """ load the datasets """
 
-base_dir = os.path.join('dataset', 'pretrain')
+base_dir = os.path.join('dataset', 'pretrain2w')
 
 train_dir = os.path.join(base_dir, 'train')
 val_dir = os.path.join(base_dir, 'validation')
@@ -48,14 +48,14 @@ test_dir = os.path.join(base_dir, 'test')
 
 train_covid_dir = os.path.join(train_dir, 'covid')
 train_normal_dir = os.path.join(train_dir, 'normal')
-train_pneumonia_dir = os.path.join(train_dir, 'pneumonia')
+
 
 val_covid_dir = os.path.join(val_dir, 'covid')
 val_normal_dir = os.path.join(val_dir, 'normal')
-val_pneumonia_dir = os.path.join(val_dir, 'pneumonia')
+
 
 INPUT_SIZE = 100
-BATCH_SIZE = 54
+BATCH_SIZE = 16
 
 
 """ Investigate train - val datasets """
@@ -76,27 +76,27 @@ val_batches = ImageDataGenerator(rescale = 1 / 255.).flow_from_directory(val_dir
 
 num_covid_train = int(len(os.listdir(train_covid_dir)))
 num_normal_train = int(len(os.listdir(train_normal_dir)))
-num_pneumonia_train = int(len(os.listdir(train_pneumonia_dir)))
+
 
 num_covid_val = int(len(os.listdir(val_covid_dir)))
 num_normal_val = int(len(os.listdir(val_normal_dir)))
-num_pneumonia_val = int(len(os.listdir(val_pneumonia_dir)))
+
 
 print('The dataset contains:')
-print('\u2022 {} training images'.format(num_covid_train + num_normal_train + num_pneumonia_train))
-print('\u2022 {} validation images'.format(num_covid_val + num_normal_val + num_pneumonia_val))
+print('\u2022 {} training images'.format(num_covid_train + num_normal_train))
+print('\u2022 {} validation images'.format(num_covid_val + num_normal_val))
 
 print('\nThe training set contains:')
 print('\u2022 {} covid images'.format(num_covid_train))
 print('\u2022 {} normal images'.format(num_normal_train))
-print('\u2022 {} pneumonia images'.format(num_pneumonia_train))
+
 
 print('\nThe validation set contains:')
 print('\u2022 {} covid images'.format(num_covid_val))
 print('\u2022 {} normal images'.format(num_normal_val))
-print('\u2022 {} pneumonia images'.format(num_pneumonia_val))
 
-MODEL_FNAME = 'embedding_network.h5'
+
+MODEL_FNAME = 'embedding_network2w.h5'
 
 tf.compat.v1.reset_default_graph()
 
@@ -115,7 +115,7 @@ if not os.path.exists(MODEL_FNAME):
     last_output = base_model.output
     
     x = Flatten()(last_output)
-    x = Dense(3, activation='softmax')(x)
+    x = Dense(2, activation='softmax')(x)
     
     embedding_network = Model(inputs=[base_model.input], outputs=[x])
     
@@ -127,7 +127,7 @@ if not os.path.exists(MODEL_FNAME):
     
     early_stopping = EarlyStopping(monitor='val_loss', patience=10)
     
-    checkpointer = ModelCheckpoint(filepath='embedding_network.h5', verbose=1, 
+    checkpointer = ModelCheckpoint(filepath='embedding_network2w.h5', verbose=1, 
                                    save_best_only=True)
             
     """ Train the model """
@@ -143,7 +143,7 @@ if not os.path.exists(MODEL_FNAME):
     
     """ plot the train and val accuracies """
     # Plot the accuracy
-    utils.plt_metric(history=history.history, metric="acc", title="Model accuracy")
+    utils.plt_metric(history=history.history, metric="accuracy", title="Model accuracy")
     
     # Plot the constrastive loss
     utils.plt_metric(history=history.history, metric="loss", title="Constrastive Loss")
@@ -162,16 +162,16 @@ else:
     
     test_covid_dir = os.path.join(test_dir, 'covid')
     test_normal_dir = os.path.join(test_dir, 'normal')
-    test_pneumonia_dir = os.path.join(test_dir, 'pneumonia')
+  
     
     num_covid_test = int(len(os.listdir(test_covid_dir)))
     num_normal_test = int(len(os.listdir(test_normal_dir)))
-    num_pneumonia_test = int(len(os.listdir(test_pneumonia_dir)))
+
 
     print('\nThe test set contains:')
     print('\u2022 {} covid images'.format(num_covid_test))
     print('\u2022 {} normal images'.format(num_normal_test))
-    print('\u2022 {} pneumonia images'.format(num_pneumonia_test))
+
 
     """ Test the model """
     model = tf.keras.models.load_model(MODEL_FNAME)
@@ -180,7 +180,7 @@ else:
     y_test = test_batches.classes
     
     #Confution Matrix and Classification Report
-    Y_pred = model.predict_generator(test_batches, (num_covid_test + num_normal_test + num_pneumonia_test) // BATCH_SIZE+1)
+    Y_pred = model.predict_generator(test_batches, (num_covid_test + num_normal_test) // BATCH_SIZE+1)
     y_pred = np.argmax(Y_pred, axis=1)
     
     class_labels = list(test_batches.class_indices.keys())   
