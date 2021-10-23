@@ -120,7 +120,7 @@ results = siamese.evaluate([x_test_1, x_test_2], labels_test)
 print("test loss, test acc:", results)
 
 Y_pred = siamese.predict([x_test_1, x_test_2]).squeeze()
-y_pred = Y_pred > Y_pred.mean()
+y_pred = Y_pred > 0.5
 y_test = labels_test
 
 print("\nEvaluate on test data")
